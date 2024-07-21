@@ -4,7 +4,6 @@
 #include <Poco/Net/HTTPResponse.h>
 #include <Poco/JSON/Parser.h>
 #include <Poco/Net/Context.h>
-#include <Poco/Exception.h>
 #include <ranges>
 
 #include "api.h"

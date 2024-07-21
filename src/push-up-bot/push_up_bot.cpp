@@ -6,6 +6,8 @@
 #include "nlohmann/json.hpp"
 #include "helpers/slavic_form.h"
 
+#include <Poco/Net/NetException.h>
+
 #include "push_up_bot.h"
 
 auto GetTimeDays()
@@ -223,9 +225,10 @@ void PushUpBot::StatsThreadLogic()
     }
 }
 
-PushUpBot::PushUpBot(std::string endpoint, std::string configName, int64_t channelID, int64_t adminID)
+PushUpBot::PushUpBot(std::string endpoint, std::string configName, std::string logName, int64_t channelID, int64_t adminID)
     : endpoint_(endpoint),
       configName_(configName),
+      logName_(logName),
       channelID_(channelID),
       adminID_(adminID),
       api_(CreateApi(endpoint_, channelID_))
@@ -266,6 +269,11 @@ void PushUpBot::HandleVideo(const Request &request)
     SaveConfig();
 }
 
+void PushUpBot::Log(const char* msg, const char* title/* = ""*/) {
+    std::ofstream out(logName_);
+    out << title << "===>" << msg << "\n" << std::endl;
+}
+
 void PushUpBot::Run()
 {
     while (true)
@@ -284,8 +292,15 @@ void PushUpBot::Run()
                 HandleVideo(request);
             }
         }
+        catch (const Poco::Net::DNSException &ex)
+        {
+            Log(ex.what(), "Poco::Net::DNSException");
+            api_->SendMessage(adminID_, fmt::format("Я упал... Текст исключения: *{}*", ex.what()),
+                              ParseMode::kMarkdown);
+        }
         catch (const std::exception &ex)
         {
+            Log(ex.what());
             api_->SendMessage(adminID_, fmt::format("Я упал... Текст исключения: *{}*", ex.what()),
                               ParseMode::kMarkdown);
         }

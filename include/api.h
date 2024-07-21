@@ -6,6 +6,8 @@
 #include <unordered_map>
 #include <optional>
 
+#include <Poco/Exception.h>
+
 #include "nlohmann/json.hpp"
 
 enum class RequestType

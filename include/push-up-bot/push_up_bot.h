@@ -32,7 +32,7 @@ struct FileConfig
 class PushUpBot
 {
 public:
-    explicit PushUpBot(std::string endpoint, std::string configName, int64_t channelID, int64_t adminID);
+    explicit PushUpBot(std::string endpoint, std::string configName, std::string logName, int64_t channelID, int64_t adminID);
     void Run();
 
 private:
@@ -45,9 +45,11 @@ private:
     void SendGlobalDuration();
     void RemainderThreadLogic();
     void StatsThreadLogic();
+    void Log(const char* msg, const char* title = "");
 
     const std::string endpoint_;
     const std::string configName_;
+    const std::string logName_;
 
     const int64_t channelID_;
     const int64_t adminID_;

@@ -1,6 +1,7 @@
 #include "push_up_bot.h"
 #include <fstream>
 #include <sstream>
+#include <iostream>
 
 int main()
 {
@@ -12,13 +13,15 @@ int main()
 
     std::string endpoint;
     std::string configName;
+    std::string logName;
     int64_t channelID;
     int64_t adminID;
 
-    if (!(iss >> endpoint >> configName >> channelID >> adminID))
+    if (!(iss >> endpoint >> configName >> logName >> channelID >> adminID))
     {
+        std::cerr << "Incorrect token!" << std::endl;
         return 1;
     }
 
-    PushUpBot(endpoint, configName, channelID, adminID).Run();
+    PushUpBot(endpoint, configName, logName, channelID, adminID).Run();
 }
