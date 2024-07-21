@@ -44,10 +44,6 @@ Poco::Dynamic::Var ApiTelegram::GetReply(const Poco::URI &uri)
 {
     std::string test = uri.toString();
     auto port = uri.getPort();
-    // Poco::UInt16 testPort = 443;
-    // Poco::Net::HTTPSClientSession session{uri.getHost(), testPort};
-    //  Poco::Net::HTTPSClientSession session{uri.getHost(), uri.getPort()};
-    //  Poco::Net::HTTPClientSession session{uri.getHost(), uri.getPort()};
     const Poco::Net::Context::Ptr context = new Poco::Net::Context(Poco::Net::Context::CLIENT_USE, "", "", "", Poco::Net::Context::VERIFY_NONE, 9, false, "ALL:!ADH:!LOW:!EXP:!MD5:@STRENGTH");
     Poco::Net::HTTPSClientSession session(uri.getHost(), uri.getPort(), context);
     Poco::Net::HTTPRequest request{Poco::Net::HTTPRequest::HTTP_GET, uri.getPathAndQuery()};
@@ -119,8 +115,6 @@ bool ApiTelegram::CheckChannel(Poco::JSON::Object::Ptr post) const
 std::pair<uint64_t, std::vector<Request>> ApiTelegram::GetUpdates(uint64_t offset, uint16_t timeout)
 {
     Poco::URI uri{endpoint_ + "getUpdates"};
-    // offset = 923380405 + 100000;
-    // offset = 886945075 + 250000;
     uri.addQueryParameter("offset", std::to_string(offset));
     uri.addQueryParameter("timeout", std::to_string(timeout));
     const auto reply = GetReply(uri);
@@ -128,18 +122,10 @@ std::pair<uint64_t, std::vector<Request>> ApiTelegram::GetUpdates(uint64_t offse
     std::vector<Request> requests;
     for (const auto &it : *result)
     {
-        // offset = it.extract<Poco::JSON::Object::Ptr>()->getValue<uint64_t>("update_id") + 1;
         const auto &message = it.extract<Poco::JSON::Object::Ptr>()->getObject("message");
         const auto &post = it.extract<Poco::JSON::Object::Ptr>()->getObject("channel_post");
         if (!post.isNull() && (post->has("video_note") || post->has("video")) && CheckChannel(post))
         {
-            // std::string username{};
-            // try {
-            // username = post->getValue<std::string>("author_signature");
-            // } catch (Poco::InvalidAccessException ex) {
-            // username = "testUser";
-            // continue;
-            // }
             const auto &username = post->getValue<std::string>("author_signature");
             auto id = GetAdminID(username);
             auto time = post->getValue<uint64_t>("date");
