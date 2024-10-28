@@ -13,6 +13,7 @@ struct ShockSeries
 {
     uint16_t duration = 0;
     uint16_t days = 0;
+    uint16_t missing_days = 0;
     uint64_t start;
 };
 
@@ -42,6 +43,7 @@ private:
 
     void SendLocalDuration();
     void SendDays();
+    void SendStatToAdmin();
     void SendGlobalDuration();
     void RemainderThreadLogic();
     void StatsThreadLogic();

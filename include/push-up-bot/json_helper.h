@@ -7,6 +7,7 @@ inline void to_json(nlohmann::json &j, ShockSeries series)
 {
     j = {{"duration", series.duration},
          {"days", series.days},
+         {"missing_days", series.missing_days},
          {"start", series.start}};
 }
 
@@ -14,6 +15,7 @@ inline void from_json(const nlohmann::json &j, ShockSeries &series)
 {
     series.duration = j.at("duration");
     series.days = j.at("days");
+    series.missing_days = j.at("missing_days");
     series.start = j.at("start");
 }
 

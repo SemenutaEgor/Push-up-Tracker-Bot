@@ -139,19 +139,26 @@ void PushUpBot::SendDays()
     static constexpr auto kTransform = [](auto &pair)
     {
         auto &series = pair.second.series;
-        uint16_t days;
+        uint16_t days = 0;
+        uint16_t missingDays = 0;
         if (series->duration)
         {
             pair.second.sum_durations += series->duration;
             series->duration = 0;
             days = ++series->days;
+            series->missing_days = missingDays = 0;
         }
-        else
-        {
+        else if (series->missing_days < 1 ) {
             days = series->days;
-            series = std::nullopt;
+            missingDays = ++series->missing_days;
+        } 
+        else 
+        {
+            days = 0;
+            missingDays = ++series->missing_days;
+            // series = std::nullopt;
         }
-        return std::make_tuple(pair.first, pair.second.username, series.has_value(), days);
+        return std::make_tuple(pair.first, pair.second.username, series.has_value(), days, missingDays);
     };
     auto views = config_.users | std::views::filter(kFilter) | std::views::transform(kTransform);
     std::vector v(views.begin(), views.end());
@@ -159,31 +166,121 @@ void PushUpBot::SendDays()
     {
         return;
     }
+
     std::ranges::sort(v, std::greater{}, [](const auto &tuple)
                       { return std::get<3>(tuple); });
-    auto save = std::make_pair(std::string("Участники, у которых *есть* ударный режим.\n\n"), 0);
-    auto lost = std::make_pair(std::string("Участники, *потерявшие* свой ударный режим. \n\n"), 0);
-    for (const auto &[id, username, is_series, days] : v)
+    auto save = std::make_pair(std::string("В ударном режиме! \n\n"), 0);
+    auto freezed = std::make_pair(std::string("В заморозке... \n\n"), 0);
+    auto lost = std::make_pair(std::string("Потеря потерь \n\n"), 0);
+    auto losers = std::make_pair(std::string("Троллейбус горит? Да и \xF0\x9F\x94\x9E с ним! \n\n"), 0);
+
+    for (const auto &[id, username, is_series, days, missingDays] : v)
     {
-        if (is_series)
+        if (days > 0 && missingDays == 0)
         {
-            save.first += fmt::format("{}. {} – теперь твой ударный режим {} ({}).\n", ++save.second,
+            save.first += fmt::format("\xF0\x9F\x94\xA5 {}. {} – {} ({}).\n", ++save.second,
                                       GetReference(id, username), GetSlavicDays(Case::kNominative, days),
                                       GetData(config_.users.at(id).series->start));
         }
-        else
-        {
-            lost.first += fmt::format("{}. {} – твой ударный режим ({}) сгорел.\n", ++lost.second,
+        else if (days > 0 && missingDays == 1) {
+            freezed.first += fmt::format("\xE2\x9D\x84 {}. {} – первый пропуск, твой ударный режим {} сгорит завтра!!! \n", ++freezed.second,
                                       GetReference(id, username), GetSlavicDays(Case::kNominative, days));
+        }
+        else if (days == 0 && missingDays == 2)
+        {
+            lost.first += fmt::format("\xF0\x9F\x93\x89 {}. {} – второй пропуск подряд, твой ударный режим ({}) сгорел... \n", ++lost.second,
+                                      GetReference(id, username), GetSlavicDays(Case::kNominative, days));
+        } else {
+            losers.first += fmt::format("\xE2\x9D\x84 {}. {} \n", ++losers.second,
+                                      GetReference(id, username));
         }
     }
     if (save.second)
     {
         api_->SendMessage(channelID_, save.first, ParseMode::kMarkdown);
     }
+    if (freezed.second)
+    {
+        api_->SendMessage(channelID_, freezed.first, ParseMode::kMarkdown);
+    }
     if (lost.second)
     {
         api_->SendMessage(channelID_, lost.first, ParseMode::kMarkdown);
+    }
+    if (losers.second) {
+        api_->SendMessage(adminID_, losers.first, ParseMode::kMarkdown);
+    }
+}
+
+void PushUpBot::SendStatToAdmin()
+{
+    static constexpr auto kFilter = [](const auto &pair)
+    {
+        return pair.second.series.has_value();
+    };
+    static constexpr auto kTransform = [](auto &pair)
+    {
+        auto &series = pair.second.series;
+        uint16_t days = 0;
+        uint16_t missingDays = 0;
+        if (series->duration)
+        {
+            pair.second.sum_durations += series->duration;
+            days = series->days;
+            missingDays = series->missing_days;
+        }
+        return std::make_tuple(pair.first, pair.second.username, series.has_value(), days, missingDays);
+    };
+
+    auto views = config_.users | std::views::filter(kFilter) | std::views::transform(kTransform);
+    std::vector v(views.begin(), views.end());
+    if (v.empty())
+    {
+        return;
+    }
+
+    std::ranges::sort(v, std::greater{}, [](const auto &tuple)
+                      { return std::get<3>(tuple); });
+    auto save = std::make_pair(std::string("В ударном режиме! \n\n"), 0);
+    auto freezed = std::make_pair(std::string("В заморозке... \n\n"), 0);
+    auto lost = std::make_pair(std::string("Потеря потерь \n\n"), 0);
+    auto losers = std::make_pair(std::string("Троллейбус горит? Да и \xF0\x9F\x94\x9E с ним! \n\n"), 0);
+
+    for (const auto &[id, username, is_series, days, missingDays] : v)
+    {
+        if (days > 0 && missingDays == 0)
+        {
+            save.first += fmt::format("\xF0\x9F\x94\xA5 {}. {} – {} ({}).\n", ++save.second,
+                                      GetReference(id, username), GetSlavicDays(Case::kNominative, days),
+                                      GetData(config_.users.at(id).series->start));
+        }
+        else if (days > 0 && missingDays == 1) {
+            freezed.first += fmt::format("\xE2\x9D\x84 {}. {} – первый пропуск, твой ударный режим {} сгорит завтра!!! \n", ++freezed.second,
+                                      GetReference(id, username), GetSlavicDays(Case::kNominative, days));
+        }
+        else if (days == 0 && missingDays == 2)
+        {
+            lost.first += fmt::format("\xF0\x9F\x93\x89 {}. {} – второй пропуск подряд, твой ударный режим ({}) сгорел... \n", ++lost.second,
+                                      GetReference(id, username), GetSlavicDays(Case::kNominative, days));
+        } else {
+            losers.first += fmt::format("\xE2\x9D\x84 {}. {} \n", ++losers.second,
+                                      GetReference(id, username));
+        }
+    }
+    if (save.second)
+    {
+        api_->SendMessage(adminID_, save.first, ParseMode::kMarkdown);
+    }
+    if (freezed.second)
+    {
+        api_->SendMessage(adminID_, freezed.first, ParseMode::kMarkdown);
+    }
+    if (lost.second)
+    {
+        api_->SendMessage(adminID_, lost.first, ParseMode::kMarkdown);
+    }
+    if (losers.second) {
+        api_->SendMessage(adminID_, losers.first, ParseMode::kMarkdown);
     }
 }
 
@@ -216,9 +313,9 @@ void PushUpBot::StatsThreadLogic()
     {
         std::this_thread::sleep_until(kUntil() - std::chrono::seconds{2});
         std::lock_guard guard(mutex_);
-        SendLocalDuration();
+        // SendLocalDuration();
         SendDays();
-        SendGlobalDuration();
+        // SendGlobalDuration();
         std::this_thread::sleep_for(std::chrono::seconds{2});
         api_->SendMessage(channelID_, "*Старт нового дня!*", ParseMode::kMarkdown);
         SaveConfig();
@@ -266,6 +363,8 @@ void PushUpBot::HandleVideo(const Request &request)
         auto user = User{.username = std::move(request.username), .series = std::move(series)};
         config_.users.emplace(request.id, std::move(user));
     }
+
+    SendStatToAdmin();
     SaveConfig();
 }
 
